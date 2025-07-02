@@ -1,23 +1,33 @@
 import discord
-from discord.ext import commands
+from discord import app_commands
 import aiohttp
 import os
 
 TOKEN = os.getenv("DISCORD_TOKEN")
 
+# Configure intents
 intents = discord.Intents.default()
-bot = commands.Bot(command_prefix="/", intents=intents)
+intents.message_content = True  # needed only if you want to support reading message content too
 
-API_URL = "https://ks-giftcode.centurygame.com/api/redeem"  # Adjust if needed
+# Create bot client
+class MyClient(discord.Client):
+    def __init__(self):
+        super().__init__(intents=intents)
+        self.tree = app_commands.CommandTree(self)
 
-@bot.event
-async def on_ready():
-    print(f"✅ Bot is ready. Logged in as {{bot.user}}")
+    async def on_ready(self):
+        print(f"✅ Bot is ready. Logged in as {self.user}")
+        await self.tree.sync()
+        print("✅ Slash commands synced.")
 
-@bot.command()
-async def redeem(ctx, player_id: str, gift_code: str):
-    """Redeem a Kingshot gift code for a player ID."""
-    await ctx.send(f"🔄 Redeeming code `{{gift_code}}` for player `{{player_id}}`...")
+client = MyClient()
+
+# Define slash command
+@client.tree.command(name="redeem", description="Redeem a Kingshot gift code for a player ID")
+@app_commands.describe(player_id="Your Kingshot Player ID", gift_code="The gift code to redeem")
+async def redeem(interaction: discord.Interaction, player_id: str, gift_code: str):
+    await interaction.response.defer(thinking=True)
+    API_URL = "https://ks-giftcode.centurygame.com/api/redeem"
 
     payload = {
         "playerId": player_id,
@@ -31,13 +41,13 @@ async def redeem(ctx, player_id: str, gift_code: str):
     async with aiohttp.ClientSession() as session:
         async with session.post(API_URL, json=payload, headers=headers) as response:
             if response.status != 200:
-                await ctx.send(f"❌ API error: {{response.status}}")
+                await interaction.followup.send(f"❌ API error: {response.status}")
                 return
 
             data = await response.json()
             if data.get("code") == 0:
-                await ctx.send(f"✅ Success: {{data.get('message', 'Code redeemed.')}}")
+                await interaction.followup.send(f"✅ Success: {data.get('message', 'Code redeemed!')}")
             else:
-                await ctx.send(f"⚠️ Failed: {{data.get('message', 'Unknown error')}}")
+                await interaction.followup.send(f"⚠️ Failed: {data.get('message', 'Unknown error')}")
 
-bot.run(TOKEN)
+client.run(TOKEN)
