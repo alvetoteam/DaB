@@ -27,7 +27,7 @@ client = MyClient()
 @app_commands.describe(player_id="Your Kingshot Player ID", gift_code="The gift code to redeem")
 async def redeem(interaction: discord.Interaction, player_id: str, gift_code: str):
     await interaction.response.defer(thinking=True)
-    API_URL = "https://ks-giftcode.centurygame.com/api/redeem"
+    API_URL = "https://kingshot-giftcode.centurygame.com/api/player"
 
     payload = {
         "playerId": player_id,
