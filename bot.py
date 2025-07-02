@@ -7,7 +7,7 @@ TOKEN = os.getenv("DISCORD_TOKEN")
 
 # Configure intents
 intents = discord.Intents.default()
-intents.message_content = True  # needed only if you want to support reading message content too
+intents.message_content = True
 
 # Create bot client
 class MyClient(discord.Client):
@@ -35,13 +35,18 @@ async def redeem(interaction: discord.Interaction, player_id: str, gift_code: st
     }
 
     headers = {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+        "Referer": "https://play.google.com/"  # اختياري، حسب حماية السيرفر
     }
 
     async with aiohttp.ClientSession() as session:
         async with session.post(API_URL, json=payload, headers=headers) as response:
             if response.status != 200:
-                await interaction.followup.send(f"❌ API error: {response.status}")
+                resp_text = await response.text()
+                await interaction.followup.send(
+                    f"❌ API error {response.status}:\n```{resp_text}```"
+                )
                 return
 
             data = await response.json()
